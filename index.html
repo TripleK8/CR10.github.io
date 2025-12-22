@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horizontal CR10 Record Sheet (10 Persons)</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load SheetJS library for Excel file reading -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Import Sarabun font (Google Fonts) -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Base styles using Sarabun exclusively */
+        html, body {
+            height: 100%; 
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f3f4f6;
+            -webkit-font-smoothing: antialiased;
+            color: #1f2937;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding-top: 20px;
+            padding-bottom: 20px;
+        }
+        
+        /* Landscape A4 Page */
+        .a4-page {
+            width: 297mm; /* Landscape Width */
+            min-height: 210mm; /* Landscape Height */
+            background: white;
+            margin: 0 auto; 
+            padding: 15mm; 
+            box-shadow: 0 0 15px rgba(0,0,0,0.15);
+            position: relative;
+            box-sizing: border-box;
+            border-radius: 8px;
+            z-index: 1; /* Base z-index */
+        }
+
+        /* Table Styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin-top: 10px;
+        }
+        
+        th, td {
+            border: 2px solid #000; /* Thicker border for clarity in field */
+            padding: 4px;
+            vertical-align: middle;
+            text-align: center;
+            position: relative; /* Create context for inputs */
+        }
+
+        /* First Column (Labels) Style */
+        td:first-child, th:first-child {
+            background-color: #f3f4f6;
+            font-weight: bold;
+            width: 150px; /* Fixed width for labels */
+            text-align: left;
+            padding-left: 10px;
+        }
+
+        /* Input Styles inside Table */
+        .table-input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+            text-align: center;
+            font-family: 'Sarabun', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            outline: none;
+            position: relative;
+            z-index: 10; /* Ensure clickable */
+            cursor: text;
+        }
+        .table-input:focus {
+            background-color: #eff6ff;
+        }
+        
+        /* Name Input Specifics */
+        .input-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: #1e3a8a; /* Dark Blue */
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        /* Header Input Styles */
+        .input-line {
+            border: none;
+            border-bottom: 1px solid #9ca3af;
+            outline: none;
+            padding: 2px 0;
+            font-weight: 500;
+            color: #000;
+            background: transparent;
+            text-align: center;
+            transition: border-bottom-color 0.2s;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Date Input Styling */
+        .input-date {
+            font-family: inherit;
+            border: none;
+            border-bottom: 1px solid #9ca3af;
+            outline: none;
+            padding: 2px 0;
+            padding-left: 5px;
+            font-weight: 500;
+            color: #000;
+            background: transparent;
+            text-align: left;
+            appearance: none;
+        }
+        
+        /* FIX: Ensure hidden date picker is ON TOP */
+        .testDateHidden {
+            z-index: 20;
+            cursor: pointer;
+        }
+
+        /* Delete Button */
+        .delete-page-btn {
+            position: absolute;
+            top: 5mm; 
+            left: 5mm; 
+            z-index: 20;
+            cursor: pointer;
+        }
+
+        /* --- Print Styles --- */
+        @media print {
+            @page {
+                size: A4 landscape; /* Force Landscape */
+                margin: 0; 
+            }
+            body {
+                background: white;
+                margin: 0;
+                display: block;
+                padding: 0 !important;
+            }
+            .a4-page {
+                box-shadow: none;
+                margin: 0;
+                page-break-after: always;
+                width: 297mm !important; 
+                height: 210mm !important;
+                padding: 10mm !important; 
+                border-radius: 0;
+            }
+            .no-print {
+                display: none !important;
+            }
+            input, select {
+                background: transparent !important;
+            }
+        }
+    </style>
+    <script>
+        const THAI_MONTHS_SHORT = [
+            "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", 
+            "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
+        ];
+
+        function formatDateToThai(isoDateString) {
+            if (!isoDateString) return '';
+            try {
+                const date = new Date(isoDateString);
+                if (isNaN(date.getTime())) return ''; 
+                const day = date.getDate();
+                const monthThai = THAI_MONTHS_SHORT[date.getMonth()];
+                const yearThai = date.getFullYear() + 543; 
+                return `${day} ${monthThai} ${yearThai}`;
+            } catch (e) { return ''; }
+        }
+
+        // --- Logic ---
+        function syncCenterSelection(selectedValue) {
+            const allSelects = document.querySelectorAll('.trainingCenterSelect');
+            if (selectedValue === undefined && allSelects.length > 0) selectedValue = allSelects[0].value;
+            allSelects.forEach(select => select.value = selectedValue);
+        }
+
+        function handleDateChange(hiddenInput) {
+            const isoDateString = hiddenInput.value;
+            const page = hiddenInput.closest('.a4-page');
+            const displayInput = page.querySelector('.testDateDisplay');
+            if (displayInput) displayInput.value = formatDateToThai(isoDateString);
+
+            // Sync
+            const syncCheckbox = page.querySelector('.sync-date-checkbox');
+            if (syncCheckbox && syncCheckbox.checked) {
+                document.querySelectorAll('.testDateHidden').forEach(input => {
+                    input.value = isoDateString;
+                    const d = input.closest('.a4-page').querySelector('.testDateDisplay');
+                    if(d) d.value = formatDateToThai(isoDateString);
+                });
+                document.querySelectorAll('.sync-date-checkbox').forEach(cb => cb.checked = true);
+            }
+        }
+
+        function deletePage(btn) {
+            if (confirm('ยืนยันการลบหน้านี้?')) {
+                btn.closest('.a4-page').remove();
+                updatePageNumbering();
+            }
+        }
+
+        function addPage() {
+            const template = document.querySelector('.a4-page');
+            const newPage = template.cloneNode(true);
+            
+            // Clear inputs
+            newPage.querySelectorAll('input').forEach(input => {
+                if(!input.classList.contains('trainingCenterSelect') && !input.classList.contains('testDateHidden') && !input.classList.contains('testDateDisplay')) {
+                    input.value = '';
+                }
+            });
+
+            // Date sync logic
+            const oldDateHidden = template.querySelector('.testDateHidden').value;
+            const oldDateDisplay = template.querySelector('.testDateDisplay').value;
+            if(newPage.querySelector('.sync-date-checkbox').checked) {
+                newPage.querySelector('.testDateHidden').value = oldDateHidden;
+                newPage.querySelector('.testDateDisplay').value = oldDateDisplay;
+            }
+
+            document.querySelector('.page-container').appendChild(newPage);
+            updatePageNumbering();
+        }
+
+        function updatePageNumbering() {
+            const pages = document.querySelectorAll('.a4-page');
+            const pageCountInput = document.getElementById('pageCountInput');
+            if(pageCountInput) pageCountInput.value = pages.length;
+            
+            pages.forEach((page, index) => {
+                const groupLabel = page.querySelector('.group-label');
+                if(groupLabel) groupLabel.textContent = `ชุดที่ (Set) ${index + 1}`;
+                
+                // Update delete button visibility
+                const delBtn = page.querySelector('.delete-page-btn');
+                if(delBtn) delBtn.style.display = pages.length === 1 ? 'none' : 'block';
+            });
+        }
+
+        function setTotalPages(count) {
+            const current = document.querySelectorAll('.a4-page').length;
+            if (count > current) {
+                for(let i=0; i < count - current; i++) addPage();
+            } else if (count < current) {
+                const pages = document.querySelectorAll('.a4-page');
+                for(let i=current-1; i >= count; i--) pages[i].remove();
+                updatePageNumbering();
+            }
+        }
+
+        function applyPageCount() {
+            const val = parseInt(document.getElementById('pageCountInput').value);
+            if(val > 0) setTotalPages(val);
+        }
+
+        // --- Excel Import Logic ---
+        function handleFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); 
+                processExcelData(json.slice(1)); 
+            };
+            reader.readAsArrayBuffer(file);
+            event.target.value = ''; 
+        }
+
+        function processExcelData(data) {
+            if (data.length === 0) return alert('ไม่พบข้อมูล');
+
+            // Need 1 page per 10 people
+            const requiredPages = Math.ceil(data.length / 10);
+            setTotalPages(requiredPages);
+
+            const allPages = document.querySelectorAll('.a4-page');
+            
+            data.forEach((row, index) => {
+                const pageIndex = Math.floor(index / 10);
+                const colIndex = index % 10; // 0 to 9
+                
+                const page = allPages[pageIndex];
+                if (!page) return;
+
+                // Find the Name inputs in the first row of table body
+                // Assuming Excel Col B (index 1) is Nickname. Adjust if needed.
+                // Fallback to Col A if Col B is empty
+                let nickname = row[1]; 
+                if(!nickname) nickname = row[0]; // Use full name if no nickname
+                if(!nickname) nickname = "";
+
+                const nameInput = page.querySelectorAll('input[data-row="name"]')[colIndex];
+                if(nameInput) nameInput.value = nickname;
+            });
+
+            alert(`นำเข้าข้อมูลเรียบร้อย ${data.length} รายชื่อ`);
+        }
+
+        function clearData() {
+            if(confirm('ล้างข้อมูลทั้งหมด?')) {
+                document.querySelectorAll('.table-input').forEach(i => i.value = '');
+            }
+        }
+
+        window.onload = () => {
+            updatePageNumbering();
+            const today = new Date().toISOString().split('T')[0];
+            document.querySelectorAll('.testDateHidden').forEach(i => {
+                i.value = today;
+                handleDateChange(i);
+            });
+        };
+    </script>
+</head>
+<body>
+
+    <!-- Floating Tools (Adjusted Position and Size) -->
+    <div class="fixed top-2 right-2 no-print z-50 flex flex-col items-end gap-2 scale-90 origin-top-right">
+        <div class="bg-white p-2 rounded-lg shadow-lg border border-gray-300 flex flex-col gap-2">
+             <div class="flex gap-2">
+                <input type="file" id="excelFileInput" accept=".xlsx,.xls" class="hidden" onchange="handleFile(event)">
+                <button onclick="document.getElementById('excelFileInput').click()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-1 px-3 rounded text-sm flex items-center gap-1 cursor-pointer">
+                    นำเข้า Excel
+                </button>
+                <button onclick="clearData()" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1 px-3 rounded text-sm cursor-pointer">
+                    ล้าง
+                </button>
+            </div>
+            <div class="text-[10px] text-gray-500 text-center">Excel: Col B=ชื่อเล่น (หรือ Col A)</div>
+        </div>
+
+        <div class="bg-white p-2 rounded-lg shadow-lg border border-gray-300 flex items-center gap-2">
+            <span class="text-sm font-semibold">จำนวนชุด:</span>
+            <input type="number" id="pageCountInput" value="1" min="1" class="w-12 text-center border rounded p-1 cursor-text">
+            <button onclick="applyPageCount()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm cursor-pointer">
+                ปรับใช้
+            </button>
+            <button onclick="addPage()" class="bg-gray-200 hover:bg-gray-300 text-black font-bold py-1 px-2 rounded text-sm cursor-pointer">+</button>
+        </div>
+
+        <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow-xl flex items-center gap-2 cursor-pointer">
+            พิมพ์
+        </button>
+    </div>
+
+    <div class="page-container">
+        <!-- Page Template (Landscape) -->
+        <div class="a4-page flex flex-col">
+            <button onclick="deletePage(this)" class="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center delete-page-btn no-print text-xs hover:bg-red-600">X</button>
+
+            <!-- Header -->
+            <div class="flex justify-between items-start mb-2">
+                <div>
+                    <h1 class="text-2xl font-bold uppercase tracking-wider text-gray-900">ใบบันทึกผลวิ่ง (Horizontal Record)</h1>
+                    <div class="flex gap-4 mt-2">
+                        <div class="flex items-center">
+                            <span class="font-bold mr-2">ศูนย์ฝึกฯ:</span>
+                            <select class="input-line font-bold text-lg cursor-pointer trainingCenterSelect" onchange="syncCenterSelection(this.value)">
+                                <option value="" disabled selected>--- เลือก ---</option>
+                                <option value="ระยอง">ระยอง</option>
+                                <option value="ราชบุรี">ราชบุรี</option>
+                                <option value="บ้านชายกรุณา">ชายบ้านกรุณา</option>
+                                <option value="เชียงใหม่">เชียงใหม่</option>
+                                <option value="สุราษฎร์ธานี">สุราษฎร์ธานี</option>
+                                <option value="อุบลราชธานี">อุบลราชธานี</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center relative">
+                            <span class="font-bold mr-2">วันที่:</span>
+                            <div class="relative w-32">
+                                <input type="text" class="input-date w-full text-center font-bold testDateDisplay pr-6" readonly>
+                                <!-- Calendar Icon -->
+                                <svg xmlns="http://www.w3.org/2000/svg" class="absolute right-0 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <!-- Fix: Explicit Z-Index 20 for clickability -->
+                                <input type="date" class="absolute inset-0 w-full opacity-0 cursor-pointer testDateHidden" onchange="handleDateChange(this)">
+                            </div>
+                            <label class="flex items-center ml-2 cursor-pointer no-print text-xs text-gray-500 relative z-20">
+                                <input type="checkbox" class="mr-1 sync-date-checkbox accent-blue-600" checked onchange="handleDateChange(this.closest('.a4-page').querySelector('.testDateHidden'))">
+                                Sync
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <h2 class="text-3xl font-bold text-gray-800 group-label border-2 border-black px-4 py-1 rounded">ชุดที่ 1</h2>
+                </div>
+            </div>
+
+            <!-- Horizontal Table -->
+            <div class="flex-1 mt-4">
+                <table class="h-full">
+                    <!-- Column Widths: 1st col is labels, rest are equal (10 people) -->
+                    <colgroup>
+                        <col style="width: 150px;">
+                        <col span="10" style="width: auto;">
+                    </colgroup>
+                    
+                    <!-- Row 1: Names (From Excel) -->
+                    <tr style="height: 60px;">
+                        <th>ชื่อเล่น<br><span class="text-sm font-normal text-gray-500">(Name)</span></th>
+                        <td><input type="text" class="table-input input-name" data-row="name"></td>
+                        <td><input type="text" class="table-input input-name" data-row="name"></td>
+                        <td><input type="text" class="table-input input-name" data-row="name"></td>
+                        <td><input type="text" class="table-input input-name" data-row="name"></td>
+                        <td><input type="text" class="table-input input-name" data-row="name"></td>
+                        <td><input type="text" class="table-input input-name" data-row="name"></td>
+                        <td><input type="text" class="table-input input-name" data-row="name"></td>
+                        <td><input type="text" class="table-input input-name" data-row="name"></td>
+                        <td><input type="text" class="table-input input-name" data-row="name"></td>
+                        <td><input type="text" class="table-input input-name" data-row="name"></td>
+                    </tr>
+
+                    <!-- Row 2: Finish Order / Laps -->
+                    <tr style="height: 100px;">
+                        <th class="bg-blue-50 text-blue-900">
+                            ลำดับที่เข้า<br>
+                            <span class="text-2xl font-bold">Finish Order</span>
+                            <div class="text-xs font-normal mt-1 text-gray-500">(เขียนเลข 1, 2, 3...)</div>
+                        </th>
+                        <!-- Input fields for Order -->
+                        <td><input type="number" class="table-input text-4xl font-bold text-blue-700"></td>
+                        <td><input type="number" class="table-input text-4xl font-bold text-blue-700"></td>
+                        <td><input type="number" class="table-input text-4xl font-bold text-blue-700"></td>
+                        <td><input type="number" class="table-input text-4xl font-bold text-blue-700"></td>
+                        <td><input type="number" class="table-input text-4xl font-bold text-blue-700"></td>
+                        <td><input type="number" class="table-input text-4xl font-bold text-blue-700"></td>
+                        <td><input type="number" class="table-input text-4xl font-bold text-blue-700"></td>
+                        <td><input type="number" class="table-input text-4xl font-bold text-blue-700"></td>
+                        <td><input type="number" class="table-input text-4xl font-bold text-blue-700"></td>
+                        <td><input type="number" class="table-input text-4xl font-bold text-blue-700"></td>
+                    </tr>
+
+                    <!-- Row 3: CR10 Cardio -->
+                    <tr style="height: 80px;">
+                        <th class="bg-green-50 text-green-900">
+                            CR10<br>
+                            <span class="text-xl">Cardio</span>
+                            <div class="text-xs font-normal mt-1">(เหนื่อย/หอบ)</div>
+                        </th>
+                        <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
+                        <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
+                        <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
+                        <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
+                        <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
+                        <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
+                        <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
+                        <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
+                        <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
+                        <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
+                    </tr>
+
+                    <!-- Row 4: CR10 Muscle -->
+                    <tr style="height: 80px;">
+                        <th class="bg-green-50 text-green-900">
+                            CR10<br>
+                            <span class="text-xl">Muscle</span>
+                            <div class="text-xs font-normal mt-1">(ล้า/เมื่อย)</div>
+                        </th>
+                        <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
+                        <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
+                        <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
+                        <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
+                        <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
+                        <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
+                        <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
+                        <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
+                        <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
+                        <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
