@@ -55,7 +55,7 @@
         
         th, td {
             border: 2px solid #000; /* Thicker border for clarity in field */
-            padding: 4px;
+            padding: 2px; /* Reduced padding on cell to give more to input */
             vertical-align: middle;
             text-align: center;
             position: relative; /* Create context for inputs */
@@ -84,6 +84,11 @@
             position: relative;
             z-index: 10; /* Ensure clickable */
             cursor: text;
+            
+            /* --- FIX THAI VOWELS CLIPPING --- */
+            line-height: 1.6; /* Increased line-height for Thai */
+            padding-top: 4px; /* Space for tone marks */
+            padding-bottom: 4px; /* Space for bottom vowels */
         }
         .table-input:focus {
             background-color: #eff6ff;
@@ -91,11 +96,10 @@
         
         /* Name Input Specifics */
         .input-name {
-            font-size: 14px;
+            font-size: 14px; /* Slightly smaller to fit */
             font-weight: bold;
             color: #1e3a8a; /* Dark Blue */
-            word-wrap: break-word;
-            white-space: pre-wrap;
+            /* Input cannot wrap text natively, kept simple to avoid clipping */
         }
 
         /* Header Input Styles */
@@ -141,6 +145,14 @@
             left: 5mm; 
             z-index: 20;
             cursor: pointer;
+        }
+        
+        /* Custom class for big numbers to fix clipping */
+        .input-big-number {
+             font-size: 2.25rem; /* text-4xl equivalent */
+             line-height: 1.5;
+             height: 100%;
+             padding: 0;
         }
 
         /* --- Print Styles --- */
@@ -446,16 +458,17 @@
                             <div class="text-xs font-normal mt-1 text-gray-500">(เขียนเลข 1, 2, 3...)</div>
                         </th>
                         <!-- Input fields for Order -->
-                        <td><input type="number" class="table-input text-4xl font-bold text-blue-700"></td>
-                        <td><input type="number" class="table-input text-4xl font-bold text-blue-700"></td>
-                        <td><input type="number" class="table-input text-4xl font-bold text-blue-700"></td>
-                        <td><input type="number" class="table-input text-4xl font-bold text-blue-700"></td>
-                        <td><input type="number" class="table-input text-4xl font-bold text-blue-700"></td>
-                        <td><input type="number" class="table-input text-4xl font-bold text-blue-700"></td>
-                        <td><input type="number" class="table-input text-4xl font-bold text-blue-700"></td>
-                        <td><input type="number" class="table-input text-4xl font-bold text-blue-700"></td>
-                        <td><input type="number" class="table-input text-4xl font-bold text-blue-700"></td>
-                        <td><input type="number" class="table-input text-4xl font-bold text-blue-700"></td>
+                        <!-- Using input-big-number class to ensure no clipping for big fonts -->
+                        <td><input type="number" class="table-input input-big-number font-bold text-blue-700"></td>
+                        <td><input type="number" class="table-input input-big-number font-bold text-blue-700"></td>
+                        <td><input type="number" class="table-input input-big-number font-bold text-blue-700"></td>
+                        <td><input type="number" class="table-input input-big-number font-bold text-blue-700"></td>
+                        <td><input type="number" class="table-input input-big-number font-bold text-blue-700"></td>
+                        <td><input type="number" class="table-input input-big-number font-bold text-blue-700"></td>
+                        <td><input type="number" class="table-input input-big-number font-bold text-blue-700"></td>
+                        <td><input type="number" class="table-input input-big-number font-bold text-blue-700"></td>
+                        <td><input type="number" class="table-input input-big-number font-bold text-blue-700"></td>
+                        <td><input type="number" class="table-input input-big-number font-bold text-blue-700"></td>
                     </tr>
 
                     <!-- Row 3: CR10 Cardio -->
