@@ -54,18 +54,18 @@
         }
         
         th, td {
-            border: 2px solid #000; /* Thicker border for clarity in field */
-            padding: 2px; /* Reduced padding on cell to give more to input */
+            border: 2px solid #000; 
+            padding: 2px;
             vertical-align: middle;
             text-align: center;
-            position: relative; /* Create context for inputs */
+            position: relative; 
         }
 
         /* First Column (Labels) Style */
         td:first-child, th:first-child {
             background-color: #f3f4f6;
             font-weight: bold;
-            width: 150px; /* Fixed width for labels */
+            width: 150px; 
             text-align: left;
             padding-left: 10px;
         }
@@ -82,27 +82,24 @@
             font-weight: 600;
             outline: none;
             position: relative;
-            z-index: 10; /* Ensure clickable */
+            z-index: 10; 
             cursor: text;
             
             /* --- FIX THAI VOWELS CLIPPING --- */
-            line-height: 1.6; /* Increased line-height for Thai */
-            padding-top: 4px; /* Space for tone marks */
-            padding-bottom: 4px; /* Space for bottom vowels */
+            line-height: 1.6; 
+            padding-top: 6px; 
+            padding-bottom: 6px; 
         }
         .table-input:focus {
             background-color: #eff6ff;
         }
         
-        /* Name Input Specifics */
         .input-name {
-            font-size: 14px; /* Slightly smaller to fit */
+            font-size: 14px;
             font-weight: bold;
-            color: #1e3a8a; /* Dark Blue */
-            /* Input cannot wrap text natively, kept simple to avoid clipping */
+            color: #1e3a8a; 
         }
 
-        /* Header Input Styles */
         .input-line {
             border: none;
             border-bottom: 1px solid #9ca3af;
@@ -117,7 +114,6 @@
             z-index: 10;
         }
 
-        /* Date Input Styling */
         .input-date {
             font-family: inherit;
             border: none;
@@ -132,13 +128,11 @@
             appearance: none;
         }
         
-        /* FIX: Ensure hidden date picker is ON TOP */
         .testDateHidden {
             z-index: 20;
             cursor: pointer;
         }
 
-        /* Delete Button */
         .delete-page-btn {
             position: absolute;
             top: 5mm; 
@@ -147,18 +141,17 @@
             cursor: pointer;
         }
         
-        /* Custom class for big numbers to fix clipping */
         .input-big-number {
-             font-size: 2.25rem; /* text-4xl equivalent */
-             line-height: 1.5;
+             font-size: 2.25rem; 
+             line-height: 1.4;
              height: 100%;
-             padding: 0;
+             padding-top: 8px;
         }
 
         /* --- Print Styles --- */
         @media print {
             @page {
-                size: A4 landscape; /* Force Landscape */
+                size: A4 landscape; 
                 margin: 0; 
             }
             body {
@@ -202,7 +195,6 @@
             } catch (e) { return ''; }
         }
 
-        // --- Logic ---
         function syncCenterSelection(selectedValue) {
             const allSelects = document.querySelectorAll('.trainingCenterSelect');
             if (selectedValue === undefined && allSelects.length > 0) selectedValue = allSelects[0].value;
@@ -215,7 +207,6 @@
             const displayInput = page.querySelector('.testDateDisplay');
             if (displayInput) displayInput.value = formatDateToThai(isoDateString);
 
-            // Sync
             const syncCheckbox = page.querySelector('.sync-date-checkbox');
             if (syncCheckbox && syncCheckbox.checked) {
                 document.querySelectorAll('.testDateHidden').forEach(input => {
@@ -238,14 +229,12 @@
             const template = document.querySelector('.a4-page');
             const newPage = template.cloneNode(true);
             
-            // Clear inputs
             newPage.querySelectorAll('input').forEach(input => {
                 if(!input.classList.contains('trainingCenterSelect') && !input.classList.contains('testDateHidden') && !input.classList.contains('testDateDisplay')) {
                     input.value = '';
                 }
             });
 
-            // Date sync logic
             const oldDateHidden = template.querySelector('.testDateHidden').value;
             const oldDateDisplay = template.querySelector('.testDateDisplay').value;
             if(newPage.querySelector('.sync-date-checkbox').checked) {
@@ -264,9 +253,8 @@
             
             pages.forEach((page, index) => {
                 const groupLabel = page.querySelector('.group-label');
-                if(groupLabel) groupLabel.textContent = `ชุดที่ (Set) ${index + 1}`;
+                if(groupLabel) groupLabel.innerHTML = `ชุดที่ ${index + 1} <span class="text-xl font-normal opacity-50 ml-2">(Set ${index + 1})</span>`;
                 
-                // Update delete button visibility
                 const delBtn = page.querySelector('.delete-page-btn');
                 if(delBtn) delBtn.style.display = pages.length === 1 ? 'none' : 'block';
             });
@@ -288,7 +276,6 @@
             if(val > 0) setTotalPages(val);
         }
 
-        // --- Excel Import Logic ---
         function handleFile(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -306,31 +293,18 @@
 
         function processExcelData(data) {
             if (data.length === 0) return alert('ไม่พบข้อมูล');
-
-            // Need 1 page per 10 people
             const requiredPages = Math.ceil(data.length / 10);
             setTotalPages(requiredPages);
-
             const allPages = document.querySelectorAll('.a4-page');
-            
             data.forEach((row, index) => {
                 const pageIndex = Math.floor(index / 10);
-                const colIndex = index % 10; // 0 to 9
-                
+                const colIndex = index % 10;
                 const page = allPages[pageIndex];
                 if (!page) return;
-
-                // Find the Name inputs in the first row of table body
-                // Assuming Excel Col B (index 1) is Nickname. Adjust if needed.
-                // Fallback to Col A if Col B is empty
-                let nickname = row[1]; 
-                if(!nickname) nickname = row[0]; // Use full name if no nickname
-                if(!nickname) nickname = "";
-
+                let nickname = row[1] || row[0] || "";
                 const nameInput = page.querySelectorAll('input[data-row="name"]')[colIndex];
                 if(nameInput) nameInput.value = nickname;
             });
-
             alert(`นำเข้าข้อมูลเรียบร้อย ${data.length} รายชื่อ`);
         }
 
@@ -338,6 +312,12 @@
             if(confirm('ล้างข้อมูลทั้งหมด?')) {
                 document.querySelectorAll('.table-input').forEach(i => i.value = '');
             }
+        }
+
+        function sendPDF() {
+            const dateStr = new Date().toISOString().slice(0,10);
+            document.title = `CR10_20MSRT_${dateStr}`;
+            window.print();
         }
 
         window.onload = () => {
@@ -352,7 +332,7 @@
 </head>
 <body>
 
-    <!-- Floating Tools (Adjusted Position and Size) -->
+    <!-- Floating Tools -->
     <div class="fixed top-2 right-2 no-print z-50 flex flex-col items-end gap-2 scale-90 origin-top-right">
         <div class="bg-white p-2 rounded-lg shadow-lg border border-gray-300 flex flex-col gap-2">
              <div class="flex gap-2">
@@ -364,7 +344,6 @@
                     ล้าง
                 </button>
             </div>
-            <div class="text-[10px] text-gray-500 text-center">Excel: Col B=ชื่อเล่น (หรือ Col A)</div>
         </div>
 
         <div class="bg-white p-2 rounded-lg shadow-lg border border-gray-300 flex items-center gap-2">
@@ -376,20 +355,25 @@
             <button onclick="addPage()" class="bg-gray-200 hover:bg-gray-300 text-black font-bold py-1 px-2 rounded text-sm cursor-pointer">+</button>
         </div>
 
-        <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow-xl flex items-center gap-2 cursor-pointer">
-            พิมพ์
+        <!-- Modified Button: Send PDF -->
+        <button onclick="sendPDF()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded shadow-xl flex items-center gap-2 cursor-pointer transition-transform active:scale-95">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+            Send PDF
         </button>
     </div>
 
     <div class="page-container">
-        <!-- Page Template (Landscape) -->
+        <!-- Page Template -->
         <div class="a4-page flex flex-col">
             <button onclick="deletePage(this)" class="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center delete-page-btn no-print text-xs hover:bg-red-600">X</button>
 
             <!-- Header -->
             <div class="flex justify-between items-start mb-2">
                 <div>
-                    <h1 class="text-2xl font-bold uppercase tracking-wider text-gray-900">ใบบันทึกผลวิ่ง (Horizontal Record)</h1>
+                    <h1 class="text-2xl font-bold uppercase tracking-wider text-gray-900">20M-SRT Test (20m Shuttle Run Test)</h1>
                     <div class="flex gap-4 mt-2">
                         <div class="flex items-center">
                             <span class="font-bold mr-2">ศูนย์ฝึกฯ:</span>
@@ -407,11 +391,9 @@
                             <span class="font-bold mr-2">วันที่:</span>
                             <div class="relative w-32">
                                 <input type="text" class="input-date w-full text-center font-bold testDateDisplay pr-6" readonly>
-                                <!-- Calendar Icon -->
                                 <svg xmlns="http://www.w3.org/2000/svg" class="absolute right-0 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
-                                <!-- Fix: Explicit Z-Index 20 for clickability -->
                                 <input type="date" class="absolute inset-0 w-full opacity-0 cursor-pointer testDateHidden" onchange="handleDateChange(this)">
                             </div>
                             <label class="flex items-center ml-2 cursor-pointer no-print text-xs text-gray-500 relative z-20">
@@ -429,15 +411,14 @@
             <!-- Horizontal Table -->
             <div class="flex-1 mt-4">
                 <table class="h-full">
-                    <!-- Column Widths: 1st col is labels, rest are equal (10 people) -->
                     <colgroup>
                         <col style="width: 150px;">
                         <col span="10" style="width: auto;">
                     </colgroup>
                     
-                    <!-- Row 1: Names (From Excel) -->
+                    <!-- Row 1: Nicknames ONLY (No EN Name) -->
                     <tr style="height: 60px;">
-                        <th>ชื่อเล่น<br><span class="text-sm font-normal text-gray-500">(Name)</span></th>
+                        <th>ชื่อเล่น</th>
                         <td><input type="text" class="table-input input-name" data-row="name"></td>
                         <td><input type="text" class="table-input input-name" data-row="name"></td>
                         <td><input type="text" class="table-input input-name" data-row="name"></td>
@@ -450,15 +431,13 @@
                         <td><input type="text" class="table-input input-name" data-row="name"></td>
                     </tr>
 
-                    <!-- Row 2: Finish Order / Laps -->
+                    <!-- Row 2: Finish Order (With EN) -->
                     <tr style="height: 100px;">
                         <th class="bg-blue-50 text-blue-900">
-                            ลำดับที่เข้า<br>
-                            <span class="text-2xl font-bold">Finish Order</span>
-                            <div class="text-xs font-normal mt-1 text-gray-500">(เขียนเลข 1, 2, 3...)</div>
+                            <span class="text-xl font-bold">ลำดับที่เข้า</span><br>
+                            <span class="text-sm font-normal opacity-60">(Finish Order)</span>
+                            <div class="text-[10px] font-normal mt-1 text-gray-400">(เขียนเลข 1, 2, 3...)</div>
                         </th>
-                        <!-- Input fields for Order -->
-                        <!-- Using input-big-number class to ensure no clipping for big fonts -->
                         <td><input type="number" class="table-input input-big-number font-bold text-blue-700"></td>
                         <td><input type="number" class="table-input input-big-number font-bold text-blue-700"></td>
                         <td><input type="number" class="table-input input-big-number font-bold text-blue-700"></td>
@@ -471,12 +450,12 @@
                         <td><input type="number" class="table-input input-big-number font-bold text-blue-700"></td>
                     </tr>
 
-                    <!-- Row 3: CR10 Cardio -->
-                    <tr style="height: 80px;">
+                    <!-- Row 3: CR10 Cardio (With EN) -->
+                    <tr style="height: 85px;">
                         <th class="bg-green-50 text-green-900">
-                            CR10<br>
-                            <span class="text-xl">Cardio</span>
-                            <div class="text-xs font-normal mt-1">(เหนื่อย/หอบ)</div>
+                            <span class="text-lg font-bold">CR10</span><br>
+                            <span class="text-sm font-normal opacity-60">(Cardio)</span>
+                            <div class="text-xs font-normal mt-1 text-gray-700">(เหนื่อย/หอบ)</div>
                         </th>
                         <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
                         <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
@@ -490,12 +469,12 @@
                         <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
                     </tr>
 
-                    <!-- Row 4: CR10 Muscle -->
-                    <tr style="height: 80px;">
+                    <!-- Row 4: CR10 Muscle (With EN) -->
+                    <tr style="height: 85px;">
                         <th class="bg-green-50 text-green-900">
-                            CR10<br>
-                            <span class="text-xl">Muscle</span>
-                            <div class="text-xs font-normal mt-1">(ล้า/เมื่อย)</div>
+                            <span class="text-lg font-bold">CR10</span><br>
+                            <span class="text-sm font-normal opacity-60">(Muscle)</span>
+                            <div class="text-xs font-normal mt-1 text-gray-700">(ล้า/เมื่อย)</div>
                         </th>
                         <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
                         <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
