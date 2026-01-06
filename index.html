@@ -42,7 +42,7 @@
             position: relative;
             box-sizing: border-box;
             border-radius: 8px;
-            z-index: 1; /* Base z-index */
+            z-index: 1;
         }
 
         /* Table Styling */
@@ -84,8 +84,6 @@
             position: relative;
             z-index: 10; 
             cursor: text;
-            
-            /* --- FIX THAI VOWELS CLIPPING --- */
             line-height: 1.6; 
             padding-top: 6px; 
             padding-bottom: 6px; 
@@ -197,8 +195,9 @@
 
         function syncCenterSelection(selectedValue) {
             const allSelects = document.querySelectorAll('.trainingCenterSelect');
-            if (selectedValue === undefined && allSelects.length > 0) selectedValue = allSelects[0].value;
-            allSelects.forEach(select => select.value = selectedValue);
+            allSelects.forEach(select => {
+                select.value = selectedValue;
+            });
         }
 
         function handleDateChange(hiddenInput) {
@@ -226,23 +225,28 @@
         }
 
         function addPage() {
+            const container = document.querySelector('.page-container');
             const template = document.querySelector('.a4-page');
             const newPage = template.cloneNode(true);
             
             newPage.querySelectorAll('input').forEach(input => {
-                if(!input.classList.contains('trainingCenterSelect') && !input.classList.contains('testDateHidden') && !input.classList.contains('testDateDisplay')) {
+                if(!input.classList.contains('testDateHidden') && !input.classList.contains('testDateDisplay')) {
                     input.value = '';
                 }
             });
 
-            const oldDateHidden = template.querySelector('.testDateHidden').value;
-            const oldDateDisplay = template.querySelector('.testDateDisplay').value;
-            if(newPage.querySelector('.sync-date-checkbox').checked) {
-                newPage.querySelector('.testDateHidden').value = oldDateHidden;
-                newPage.querySelector('.testDateDisplay').value = oldDateDisplay;
-            }
+            const currentDate = template.querySelector('.testDateHidden').value;
+            const currentCenter = template.querySelector('.trainingCenterSelect').value;
+            
+            const newDateHidden = newPage.querySelector('.testDateHidden');
+            const newDateDisplay = newPage.querySelector('.testDateDisplay');
+            const newCenterSelect = newPage.querySelector('.trainingCenterSelect');
 
-            document.querySelector('.page-container').appendChild(newPage);
+            if(newDateHidden) newDateHidden.value = currentDate;
+            if(newDateDisplay) newDateDisplay.value = formatDateToThai(currentDate);
+            if(newCenterSelect) newCenterSelect.value = currentCenter;
+
+            container.appendChild(newPage);
             updatePageNumbering();
         }
 
@@ -284,7 +288,9 @@
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
                 const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                // Get all rows as header:1 (Array of Arrays)
                 const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); 
+                // Skip first row (index 0) and pass the rest
                 processExcelData(json.slice(1)); 
             };
             reader.readAsArrayBuffer(file);
@@ -293,19 +299,34 @@
 
         function processExcelData(data) {
             if (data.length === 0) return alert('ไม่พบข้อมูล');
-            const requiredPages = Math.ceil(data.length / 10);
+
+            // Extract names from Column I (index 8) and filter out empty values
+            const names = data
+                .map(row => row[8]) // Column I is index 8
+                .filter(name => name !== undefined && name !== null && name.toString().trim() !== "");
+
+            if (names.length === 0) {
+                return alert('ไม่พบข้อมูลรายชื่อในคอลัมน์ I (เริ่มจากแถวที่ 2)');
+            }
+
+            const requiredPages = Math.ceil(names.length / 10);
             setTotalPages(requiredPages);
+            
             const allPages = document.querySelectorAll('.a4-page');
-            data.forEach((row, index) => {
+            
+            names.forEach((name, index) => {
                 const pageIndex = Math.floor(index / 10);
                 const colIndex = index % 10;
                 const page = allPages[pageIndex];
                 if (!page) return;
-                let nickname = row[1] || row[0] || "";
-                const nameInput = page.querySelectorAll('input[data-row="name"]')[colIndex];
-                if(nameInput) nameInput.value = nickname;
+                
+                const nameInputs = page.querySelectorAll('input[data-row="name"]');
+                if(nameInputs[colIndex]) {
+                    nameInputs[colIndex].value = name;
+                }
             });
-            alert(`นำเข้าข้อมูลเรียบร้อย ${data.length} รายชื่อ`);
+            
+            alert(`นำเข้าข้อมูลเรียบร้อย ${names.length} รายชื่อ จากคอลัมน์ I`);
         }
 
         function clearData() {
@@ -355,7 +376,6 @@
             <button onclick="addPage()" class="bg-gray-200 hover:bg-gray-300 text-black font-bold py-1 px-2 rounded text-sm cursor-pointer">+</button>
         </div>
 
-        <!-- Modified Button: Send PDF -->
         <button onclick="sendPDF()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded shadow-xl flex items-center gap-2 cursor-pointer transition-transform active:scale-95">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -416,9 +436,9 @@
                         <col span="10" style="width: auto;">
                     </colgroup>
                     
-                    <!-- Row 1: Nicknames ONLY (No EN Name) -->
+                    <!-- Row 1: Names/Nicknames -->
                     <tr style="height: 60px;">
-                        <th>ชื่อเล่น</th>
+                        <th>ชื่อ/ชื่อเล่น</th>
                         <td><input type="text" class="table-input input-name" data-row="name"></td>
                         <td><input type="text" class="table-input input-name" data-row="name"></td>
                         <td><input type="text" class="table-input input-name" data-row="name"></td>
@@ -431,7 +451,7 @@
                         <td><input type="text" class="table-input input-name" data-row="name"></td>
                     </tr>
 
-                    <!-- Row 2: Finish Order (With EN) -->
+                    <!-- Row 2: Finish Order -->
                     <tr style="height: 100px;">
                         <th class="bg-blue-50 text-blue-900">
                             <span class="text-xl font-bold">ลำดับที่เข้า</span><br>
@@ -450,7 +470,7 @@
                         <td><input type="number" class="table-input input-big-number font-bold text-blue-700"></td>
                     </tr>
 
-                    <!-- Row 3: CR10 Cardio (With EN) -->
+                    <!-- Row 3: CR10 Cardio -->
                     <tr style="height: 85px;">
                         <th class="bg-green-50 text-green-900">
                             <span class="text-lg font-bold">CR10</span><br>
@@ -469,7 +489,7 @@
                         <td><input type="number" class="table-input text-2xl" min="0" max="10"></td>
                     </tr>
 
-                    <!-- Row 4: CR10 Muscle (With EN) -->
+                    <!-- Row 4: CR10 Muscle -->
                     <tr style="height: 85px;">
                         <th class="bg-green-50 text-green-900">
                             <span class="text-lg font-bold">CR10</span><br>
